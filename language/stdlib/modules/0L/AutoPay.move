@@ -160,7 +160,7 @@ address 0x1{
                 payment.amt
               };
               
-              if (amount != 0) {
+              if (amount != 0 && amount <= account_bal) {
                 LibraAccount::make_payment<GAS>(*account_addr, payment.payee, amount, x"", x"", vm);
               };
 
@@ -172,7 +172,9 @@ address 0x1{
                 delete_payment = true;
               }
               
-            } else {
+            };
+            // if the payment has reached its last epoch, delete it
+            if (payment.end_epoch <= epoch) {
               delete_payment = true;
             };
           };
