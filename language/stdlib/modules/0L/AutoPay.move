@@ -13,9 +13,6 @@ address 0x1{
     use 0x1::FixedPoint32;
     use 0x1::CoreAddresses;
     use 0x1::LibraConfig;
-    use 0x1::LibraTimestamp;
-    use 0x1::Epoch;
-    use 0x1::Globals;
     use 0x1::Errors;
 
     /// Attempted to send funds to an account that does not exist
@@ -83,12 +80,8 @@ address 0x1{
       let tick_state = borrow_global_mut<Tick>(Signer::address_of(vm));
 
       if (!tick_state.triggered) {
-        let timer = LibraTimestamp::now_seconds() - Epoch::get_timer_seconds_start(vm);
-        let tick_interval = Globals::get_epoch_length();
-        if (timer > tick_interval/2) {
-          tick_state.triggered = true;
-          return true
-        }
+        tick_state.triggered = true;
+        return true
       };
       false
     }

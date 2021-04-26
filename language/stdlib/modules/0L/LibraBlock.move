@@ -88,6 +88,8 @@ module LibraBlock {
         Stats::inc_prop(vm, *&proposer);
         
         if (AutoPay::tick(vm)){
+            //triggers autopay at beginning of each epoch 
+            //tick is reset at end of previous epoch
             AutoPay::process_autopay(vm);
         };
 
