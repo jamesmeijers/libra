@@ -213,6 +213,7 @@ module LibraAccount {
         list: vector<Escrow<Token>>,
     }
     //////// 0L ////////
+    /*
     public fun new_autopay_escrow<Token>(
         sender: &signer,
         recipient: address,
@@ -269,7 +270,7 @@ module LibraAccount {
             k = k + 1;
         };
         0
-    }
+    }*/
 
     /// Initialize this module. This is only callable from genesis.
     public fun initialize(
@@ -886,15 +887,41 @@ module LibraAccount {
         // VM can extract the withdraw token.
         let account = borrow_global_mut<LibraAccount>(payer);
         let cap = Option::extract(&mut account.withdraw_capability);
-        deposit<Token>(
-            cap.account_address,
+        let max_withdraw = AccountLimits::max_withdrawl<Token>(payer);
+
+        let transfer_now = 
+            if (max_withdraw >= amount) { 
+                amount 
+            } else {
+                max_withdraw
+            };
+        let transfer_later = amount - transfer_now;
+
+        pay_from<Token>(
+            &cap,
             payee,
-            withdraw_from(&cap, payee, amount, copy metadata),
+            transfer_now,
             metadata,
             metadata_signature
         );
+        // deposit<Token>(
+        //     cap.account_address,
+        //     payee,
+        //     withdraw_from(&cap, payee, amount, copy metadata),
+        //     metadata,
+        //     metadata_signature
+        // );
+
+
+        if (transfer_later > 0)
+        {
+            //TODO: escrow payments
+            let _ = 0;
+        };
+
         restore_withdraw_capability(cap);
     }
+
 
     /// Withdraw `amount` Libra<Token> from the address embedded in `WithdrawCapability` and
     /// deposits it into the `payee`'s account balance.

@@ -4,6 +4,34 @@
 // We test processing of autopay at differnt epochs and balance transfers
 // Finally, we also check the end_epoch functionality of autopay
 
+
+//! new-transaction
+//! sender: libraroot
+script {
+    use 0x1::AccountLimits;
+    use 0x1::CoreAddresses;
+    use 0x1::GAS::GAS;
+    fun main(account: &signer) {
+        AccountLimits::update_limits_definition<GAS>(account, CoreAddresses::LIBRA_ROOT_ADDRESS(), 0, 1000000, 0, 0);
+    }
+}
+// check: "Keep(EXECUTED)"
+
+//! new-transaction
+//! sender: libraroot
+//! execute-as: alice
+script {
+use 0x1::AccountLimits;
+use 0x1::GAS::GAS;
+fun main(lr: &signer, alice_account: &signer) {
+    AccountLimits::publish_unrestricted_limits<GAS>(alice_account);
+    AccountLimits::update_limits_definition<GAS>(lr, {{alice}}, 0, 1000000, 0, 0);
+    AccountLimits::publish_window<GAS>(lr, alice_account, {{alice}});
+}
+}
+// check: "Keep(EXECUTED)"
+
+
 // creating the instruction
 //! new-transaction
 //! sender: alice
@@ -30,6 +58,7 @@ script {
   use 0x1::AutoPay;
   use 0x1::LibraAccount;
   use 0x1::GAS::GAS;
+  use 0x1::Debug::print;
   fun main(sender: &signer) {
     let alice_balance = LibraAccount::balance<GAS>({{alice}});
     let bob_balance = LibraAccount::balance<GAS>({{bob}});
@@ -40,6 +69,7 @@ script {
     assert(alice_balance_after < alice_balance, 2);
     
     let transferred = alice_balance - alice_balance_after;
+    print(&transferred);
     let bob_received = LibraAccount::balance<GAS>({{bob}}) - bob_balance;
     assert(bob_received == transferred, 2);
     }

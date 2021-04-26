@@ -446,6 +446,30 @@ module AccountLimits {
             tracked_balance, receiving.tracked_balance + amount)
     }
 
+    public fun max_withdrawl<CoinType>(
+        addr: address,
+    ): u64 acquires Window, LimitsDefinition {
+        assert(exists<Window<CoinType>>(addr), Errors::not_published(EWINDOW));
+        let sending = borrow_global_mut<Window<CoinType>>(addr);
+
+        assert(exists<LimitsDefinition<CoinType>>(sending.limit_address), Errors::not_published(ELIMITS_DEFINITION));
+        let limits_definition = borrow_global<LimitsDefinition<CoinType>>(sending.limit_address);
+        // If the limits are unrestricted then don't do any more work.
+        if (is_unrestricted(limits_definition)) return MAX_U64;
+
+        reset_window(sending, limits_definition);
+        // Check outflow is OK
+        assert(limits_definition.max_outflow >= sending.window_outflow, Errors::limit_exceeded(EWINDOW));
+        let max_outflow = limits_definition.max_outflow - sending.window_outflow;
+        // Flow is OK, so record it.
+        max_outflow
+
+    }
+    
+
+
+
+
     /// Verify that `amount` can be withdrawn from the account tracked
     /// by the `sending` window without violating any limits specified
     /// in its `limits_definition`.
