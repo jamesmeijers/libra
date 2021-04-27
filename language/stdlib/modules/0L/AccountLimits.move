@@ -446,7 +446,7 @@ module AccountLimits {
             tracked_balance, receiving.tracked_balance + amount)
     }
 
-    public fun max_withdrawl<CoinType>(
+    public fun max_withdrawal<CoinType>(
         addr: address,
     ): u64 acquires Window, LimitsDefinition {
         assert(exists<Window<CoinType>>(addr), Errors::not_published(EWINDOW));

@@ -212,7 +212,105 @@ module LibraAccount {
     resource struct AutopayEscrow <Token>{
         list: vector<Escrow<Token>>,
     }
+
+    resource struct EscrowList<Token>{
+        accounts: vector<address>
+    }
     //////// 0L ////////
+    public fun new_escrow<Token>(
+        account: &signer,
+        payer: address,
+        payee: address,
+        amount: u64,
+    ) acquires Balance, AutopayEscrow {
+        Roles::assert_libra_root(account);
+
+        // Formal verification spec: should not get anyone else's balance struct
+        let balance_struct = borrow_global_mut<Balance<Token>>(payer);
+        let coin = Libra::withdraw<Token>(&mut balance_struct.coin, amount);
+
+        let new_escrow = Escrow {
+            to_account: payee,
+            escrow: coin,
+        };
+
+        let state = borrow_global_mut<AutopayEscrow<Token>>(payer);
+        Vector::push_back<Escrow<Token>>(&mut state.list, new_escrow);
+
+    }
+
+    public fun process_escrow<Token>(
+        account: &signer
+    ) acquires EscrowList, AutopayEscrow, Balance {
+        Roles::assert_libra_root(account);
+
+        let account_list = &borrow_global<EscrowList<Token>>(CoreAddresses::LIBRA_ROOT_ADDRESS()).accounts;
+        let account_len = Vector::length<address>(account_list);
+        let account_idx = 0;
+
+        while (account_idx < account_len) {
+            let account_addr = Vector::borrow<address>(account_list, account_idx);
+
+            //get transfer limit room
+            let limit_room = AccountLimits::max_withdrawal<Token>(*account_addr);
+
+            let payment_list = &mut borrow_global_mut<AutopayEscrow<Token>>(*account_addr).list;
+            let num_payments = Vector::length<Escrow<Token>>(payment_list);
+            
+            //pay out escrow until limit is reached
+            //TODO update Account limit once payment is set 
+            //TODO conver to FIFO
+            while (limit_room > 0 && num_payments > 0) {
+                let Escrow<Token> {to_account, escrow} = Vector::remove<Escrow<Token>>(payment_list, 0);
+                let recipient_coins = borrow_global_mut<Balance<Token>>(to_account);
+                let payment_size = Libra::value<Token>(&escrow);
+                if (payment_size > limit_room) {
+                    let (coin1, coin2) = Libra::split<Token>(escrow, limit_room);
+                    Libra::deposit<Token>(&mut recipient_coins.coin, coin2);
+                    let new_escrow = Escrow {
+                        to_account: to_account,
+                        escrow: coin1,
+                    };
+                    //This is pushing it to the end, it needs to go back to the beginning
+                    Vector::push_back<Escrow<Token>>(payment_list, new_escrow);
+                    limit_room = 0;
+                } else {
+                    //This entire escrow is being paid out
+                    Libra::deposit<Token>(&mut recipient_coins.coin, escrow);
+                    limit_room = limit_room - payment_size;
+                    num_payments = num_payments - 1;
+                }
+            };
+            account_idx = account_idx + 1;
+        }
+
+    }
+
+    public fun initialize_escrow<Token>(
+        sender: &signer
+    ) acquires EscrowList {
+        let account = Signer::address_of(sender);
+        if (!exists<AutopayEscrow<Token>>(account)) {
+            move_to<AutopayEscrow<Token>>(sender, AutopayEscrow {
+                list: Vector::empty<Escrow<Token>>()
+            });
+            let escrow_list = &mut borrow_global_mut<EscrowList<Token>>(CoreAddresses::LIBRA_ROOT_ADDRESS()).accounts;
+
+            if (!Vector::contains<address>(escrow_list, &account)){
+                Vector::push_back<address>(escrow_list, account);
+            };
+        };
+
+    }
+
+    public fun initialize_escrow_root<Token>(
+        sender: &signer
+    ) {
+        move_to<EscrowList<Token>>(sender, EscrowList<Token>{ accounts: Vector::empty<address>()});
+    }
+
+
+
     /*
     public fun new_autopay_escrow<Token>(
         sender: &signer,
@@ -857,6 +955,49 @@ module LibraAccount {
     
     // 0L function for AutoPay module
     // 0L error suffix 120101
+    /*public fun make_payment<Token>(
+        _payer : address,
+        _payee: address,
+        _amount: u64,
+        _metadata: vector<u8>,
+        _metadata_signature: vector<u8>,
+        _vm: &signer
+    ) {
+
+    }*/
+
+    /*
+    public fun make_payment<Token>(
+        payer : address,
+        payee: address,
+        _amount: u64,
+        _metadata: vector<u8>,
+        _metadata_signature: vector<u8>,
+        vm: &signer
+    ) acquires LibraAccount{
+        if (Signer::address_of(vm) != CoreAddresses::LIBRA_ROOT_ADDRESS()) return;
+
+        // Check payee can receive funds in this currency.
+        if (!exists<Balance<Token>>(payee)) return; 
+        // assert(exists<Balance<Token>>(payee), Errors::not_published(EROLE_CANT_STORE_BALANCE));
+
+        // Check there is a payer
+        if (!exists_at(payer)) return; 
+
+        // assert(exists_at(payer), Errors::not_published(EACCOUNT));
+
+        // Check the payer is in possession of withdraw token.
+        if (delegated_withdraw_capability(payer)) return; 
+
+        let _account = borrow_global_mut<LibraAccount>(payer);
+        //let cap = Option::extract(&mut account.withdraw_capability);
+        //let _max_withdraw = AccountLimits::max_withdrawal<Token>(payer);
+
+        
+    }*/
+
+
+    
     public fun make_payment<Token>(
         payer : address,
         payee: address,
@@ -864,7 +1005,7 @@ module LibraAccount {
         metadata: vector<u8>,
         metadata_signature: vector<u8>,
         vm: &signer
-    ) acquires LibraAccount , Balance, AccountOperationsCapability {
+    ) acquires LibraAccount , Balance, AccountOperationsCapability, AutopayEscrow {
         if (Signer::address_of(vm) != CoreAddresses::LIBRA_ROOT_ADDRESS()) return;
 
         // Check payee can receive funds in this currency.
@@ -887,7 +1028,7 @@ module LibraAccount {
         // VM can extract the withdraw token.
         let account = borrow_global_mut<LibraAccount>(payer);
         let cap = Option::extract(&mut account.withdraw_capability);
-        let max_withdraw = AccountLimits::max_withdrawl<Token>(payer);
+        let max_withdraw = AccountLimits::max_withdrawal<Token>(payer);
 
         let transfer_now = 
             if (max_withdraw >= amount) { 
@@ -896,27 +1037,19 @@ module LibraAccount {
                 max_withdraw
             };
         let transfer_later = amount - transfer_now;
-
-        pay_from<Token>(
-            &cap,
-            payee,
-            transfer_now,
-            metadata,
-            metadata_signature
-        );
-        // deposit<Token>(
-        //     cap.account_address,
-        //     payee,
-        //     withdraw_from(&cap, payee, amount, copy metadata),
-        //     metadata,
-        //     metadata_signature
-        // );
-
+        if (transfer_now > 0) {
+            pay_from<Token>(
+                &cap,
+                payee,
+                transfer_now,
+                metadata,
+                metadata_signature
+            );
+        };
 
         if (transfer_later > 0)
         {
-            //TODO: escrow payments
-            let _ = 0;
+            new_escrow<Token>(vm, payer, payee, transfer_later);
         };
 
         restore_withdraw_capability(cap);

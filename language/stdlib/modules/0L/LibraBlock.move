@@ -13,6 +13,8 @@ module LibraBlock {
     use 0x1::Stats;
     use 0x1::AutoPay;
     use 0x1::Epoch;
+    use 0x1::GAS::GAS;
+    use 0x1::LibraAccount;
 
     resource struct BlockMetadata {
         /// Height of the current block
@@ -90,6 +92,7 @@ module LibraBlock {
         if (AutoPay::tick(vm)){
             //triggers autopay at beginning of each epoch 
             //tick is reset at end of previous epoch
+            LibraAccount::process_escrow<GAS>(vm);
             AutoPay::process_autopay(vm);
         };
 

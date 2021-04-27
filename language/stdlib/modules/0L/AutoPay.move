@@ -96,7 +96,9 @@ address 0x1{
     public fun initialize(sender: &signer) {
       assert(Signer::address_of(sender) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 0101014010);
       move_to<AccountList>(sender, AccountList { accounts: Vector::empty<address>(), current_epoch: 0, });
-      move_to<Tick>(sender, Tick {triggered: false})
+      move_to<Tick>(sender, Tick {triggered: false});
+
+      LibraAccount::initialize_escrow_root<GAS>(sender);
     }
 
     // This is the main function for this module. It is called once every epoch
@@ -199,6 +201,9 @@ address 0x1{
       };
       // Initialize the instructions Data on user account state 
       move_to<Data>(acc, Data { payments: Vector::empty<Payment>()});
+
+      // Initialize Escrow data
+      LibraAccount::initialize_escrow<GAS>(acc);
     }
 
     // An account can disable autopay on it's account
