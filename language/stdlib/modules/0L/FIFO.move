@@ -44,7 +44,7 @@ module FIFO {
         Vector::borrow_mut<Element>(&mut v.outgoing, len - 1)
     }
 
-    public fun len<Element>(v: &mut FIFO<Element>): u64{
+    public fun len<Element>(v: & FIFO<Element>): u64{
         Vector::length<Element>(& v.outgoing) + Vector::length<Element>(& v.incoming)
     }
 
