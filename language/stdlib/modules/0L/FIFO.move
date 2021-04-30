@@ -1,5 +1,8 @@
 address 0x1 {
 
+//Implementation of a FIFO that utilizes two vectors
+//Achieves Amortized O(1) cost per operation 
+//CAUTION: In worst case this can result in O(n) cost, adjust gas allowance accordingly 
 module FIFO {
     use 0x1::Vector;
 
