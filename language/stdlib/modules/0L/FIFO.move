@@ -24,6 +24,10 @@ module FIFO {
         Vector::push_back<Element>(&mut v.incoming, new_item);
     }
 
+    public fun push_LIFO<Element>(v: &mut FIFO<Element>, new_item: Element){
+        Vector::push_back<Element>(&mut v.outgoing, new_item);
+    }
+
     public fun pop<Element>(v: &mut FIFO<Element>): Element{
         perform_swap<Element>(v);
         //now pop from the outgoing queue

@@ -59,6 +59,11 @@ script {
         let len = FIFO::len<u64>(& f);
         assert(len == 4, 1);
 
+        FIFO::push_LIFO<u64>(&mut f, 77);
+        let g = FIFO::pop<u64>(&mut f); //77
+        assert(g == 77, 1);
+
+
         let g = FIFO::pop<u64>(&mut f); //7
         let h = FIFO::pop<u64>(&mut f); //8
         let i = FIFO::pop<u64>(&mut f); //9
