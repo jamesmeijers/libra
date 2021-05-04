@@ -36,6 +36,7 @@ module LibraAccount {
     use 0x1::Globals;
     use 0x1::MinerState;
     use 0x1::TrustedAccounts;
+    use 0x1::FIFO;
 
     /// An `address` is a Libra Account if it has a published LibraAccount resource.
     resource struct LibraAccount {
@@ -210,7 +211,7 @@ module LibraAccount {
         escrow: Libra::Libra<Token>,
     }
     resource struct AutopayEscrow <Token>{
-        list: vector<Escrow<Token>>,
+        list: FIFO::FIFO<Escrow<Token>>,
     }
 
     resource struct EscrowList<Token>{
@@ -235,7 +236,7 @@ module LibraAccount {
         };
 
         let state = borrow_global_mut<AutopayEscrow<Token>>(payer);
-        Vector::push_back<Escrow<Token>>(&mut state.list, new_escrow);
+        FIFO::push<Escrow<Token>>(&mut state.list, new_escrow);
 
     }
 
@@ -255,13 +256,13 @@ module LibraAccount {
             let limit_room = AccountLimits::max_withdrawal<Token>(*account_addr);
 
             let payment_list = &mut borrow_global_mut<AutopayEscrow<Token>>(*account_addr).list;
-            let num_payments = Vector::length<Escrow<Token>>(payment_list);
+            let num_payments = FIFO::len<Escrow<Token>>(payment_list);
             
             //pay out escrow until limit is reached
             //TODO update Account limit once payment is set 
             //TODO conver to FIFO
             while (limit_room > 0 && num_payments > 0) {
-                let Escrow<Token> {to_account, escrow} = Vector::remove<Escrow<Token>>(payment_list, 0);
+                let Escrow<Token> {to_account, escrow} = FIFO::pop<Escrow<Token>>(payment_list);
                 let recipient_coins = borrow_global_mut<Balance<Token>>(to_account);
                 let payment_size = Libra::value<Token>(&escrow);
                 if (payment_size > limit_room) {
@@ -272,7 +273,7 @@ module LibraAccount {
                         escrow: coin1,
                     };
                     //This is pushing it to the end, it needs to go back to the beginning
-                    Vector::push_back<Escrow<Token>>(payment_list, new_escrow);
+                    FIFO::push_LIFO<Escrow<Token>>(payment_list, new_escrow);
                     limit_room = 0;
                 } else {
                     //This entire escrow is being paid out
@@ -292,7 +293,7 @@ module LibraAccount {
         let account = Signer::address_of(sender);
         if (!exists<AutopayEscrow<Token>>(account)) {
             move_to<AutopayEscrow<Token>>(sender, AutopayEscrow {
-                list: Vector::empty<Escrow<Token>>()
+                list: FIFO::empty<Escrow<Token>>()
             });
             let escrow_list = &mut borrow_global_mut<EscrowList<Token>>(CoreAddresses::LIBRA_ROOT_ADDRESS()).accounts;
 
