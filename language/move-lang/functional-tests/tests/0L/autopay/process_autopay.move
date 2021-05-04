@@ -36,13 +36,13 @@ fun main(lr: &signer, alice_account: &signer) {
 //! new-transaction
 //! sender: alice
 script {
-  use 0x1::AutoPay;
+  use 0x1::AutoPay2;
   use 0x1::Signer;
   fun main(sender: &signer) {
-    AutoPay::enable_autopay(sender);
-    assert(AutoPay::is_enabled(Signer::address_of(sender)), 0);
-    AutoPay::create_instruction(sender, 1, 0, {{bob}}, 2, 5);
-    let (type, payee, end_epoch, percentage) = AutoPay::query_instruction(Signer::address_of(sender), 1);
+    AutoPay2::enable_autopay(sender);
+    assert(AutoPay2::is_enabled(Signer::address_of(sender)), 0);
+    AutoPay2::create_instruction(sender, 1, 0, {{bob}}, 2, 5);
+    let (type, payee, end_epoch, percentage) = AutoPay2::query_instruction(Signer::address_of(sender), 1);
     assert(type == 0u8, 1);
     assert(payee == {{bob}}, 1);
     assert(end_epoch == 2, 1);
@@ -51,11 +51,11 @@ script {
 }
 // check: EXECUTED
 
-// Processing AutoPay to see if payments are done
+// Processing AutoPay2 to see if payments are done
 //! new-transaction
 //! sender: libraroot
 script {
-  use 0x1::AutoPay;
+  use 0x1::AutoPay2;
   use 0x1::LibraAccount;
   use 0x1::GAS::GAS;
   use 0x1::Debug::print;
@@ -63,7 +63,7 @@ script {
     let alice_balance = LibraAccount::balance<GAS>({{alice}});
     let bob_balance = LibraAccount::balance<GAS>({{bob}});
     assert(alice_balance==1000000, 1);
-    AutoPay::process_autopay(sender);
+    AutoPay2::process_autopay(sender);
     
     let alice_balance_after = LibraAccount::balance<GAS>({{alice}});
     assert(alice_balance_after < alice_balance, 2);

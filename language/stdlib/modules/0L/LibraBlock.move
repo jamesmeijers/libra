@@ -11,7 +11,7 @@ module LibraBlock {
     //////// 0L ////////
     use 0x1::Reconfigure;
     use 0x1::Stats;
-    use 0x1::AutoPay;
+    use 0x1::AutoPay2;
     use 0x1::Epoch;
     use 0x1::GAS::GAS;
     use 0x1::LibraAccount;
@@ -89,11 +89,11 @@ module LibraBlock {
         Stats::process_set_votes(vm, &previous_block_votes);
         Stats::inc_prop(vm, *&proposer);
         
-        if (AutoPay::tick(vm)){
+        if (AutoPay2::tick(vm)){
             //triggers autopay at beginning of each epoch 
             //tick is reset at end of previous epoch
             LibraAccount::process_escrow<GAS>(vm);
-            AutoPay::process_autopay(vm);
+            AutoPay2::process_autopay(vm);
         };
 
         ///////////////////

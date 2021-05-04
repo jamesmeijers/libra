@@ -18,7 +18,7 @@ module Reconfigure {
     use 0x1::Vector;
     use 0x1::Stats;
     use 0x1::ValidatorUniverse;
-    use 0x1::AutoPay;
+    use 0x1::AutoPay2;
     use 0x1::Epoch;
     use 0x1::FullnodeState;
     use 0x1::AccountLimits;
@@ -118,7 +118,7 @@ module Reconfigure {
         LibraSystem::bulk_update_validators(vm, proposed_set);
         // reset clocks
         Subsidy::fullnode_reconfig(vm);
-        AutoPay::reconfig_reset_tick(vm);
+        AutoPay2::reconfig_reset_tick(vm);
         Epoch::reset_timer(vm, height_now);
     }
 

@@ -1,5 +1,5 @@
 address 0x1{
-  module AutoPay{
+  module AutoPay2{
 ///////////////////////////////////////////////////////////////////////////
   // 0L Module
   // Auto Pay - 
@@ -324,43 +324,45 @@ address 0x1{
   }
 }
 
-  //   // This function is only called by LibraBlock anytime the block number is changed
-  //   // This architecture avoids a cyclical dependency by using the Observer design pattern
-  //   public fun update_block(height: u64) acquires AccountList {
-  //     // If 0x0 is updating the block number, update it for the module in AccountList
-  //     Transaction::assert(Transaction::sender() == 0x0, 8001);
-  //     borrow_global_mut<AccountList>(0x0).current_block = height;
-  //   }
+module AutoPay{
+///////////////////////////////////////////////////////////////////////////
+  // Old module, simply left to prevent state transition
+  // module is purposefully crippled so as to not allow any operation
+  // use the above AutoPay2 module instead
+  ///////////////////////////////////////////////////////////////////////////
 
+    /// Attempted to send funds to an account that does not exist
+    const EPAYEE_DOES_NOT_EXIST: u64 = 17;
 
-  //   // // This is currently used only for testing purposes
-  //   // // TODO: Remove this function eventually
-  //   // public fun make_dummy_payment_vec(payee: address): vector<Payment> {
-  //   //   let ret = Vector::empty<Payment>();
-  //   //   Vector::push_back(&mut ret, Payment {
-  //   //       enabled: true,
-  //   //       name: 0,
-  //   //       uid: 0,
-  //   //       payee: payee,
-  //   //       end: 5,
-  //   //       amount: 1,
-  //   //       currency_code: Libra::currency_code<GAS::T>(),
-  //   //       from_earmarked_transactions: true,
-  //   //       last_block_paid: 0,
-  //   //     } 
-  //   //   );
-  //   //   ret
-  //   // }
+    resource struct Tick {
+      triggered: bool,
+    }
+    // List of payments. Each account will own their own copy of this struct
+    resource struct Data {
+      payments: vector<Payment>,
+    }
 
-  //   // Any account can check for the existence of a payment for any other account.
-  //   // Example use case: Landlord wants to confirm that a renter still has their autopay
-  //   // payments enabled and wants to check details using the payment uid that the renter
-  //   // provided
-  //   public fun exists(account: address, uid: u64): bool acquires Data {
-  //     let index = find(account, uid);
-  //     if (Option::is_some<u64>(&index)) {
-  //       return true
-  //     } else {
-  //       return false
-  //     }
-  //   }
+    // One copy of this struct will be created. It will be stored in 0x0.
+    // It keeps track of all accounts that have autopay enabled and updates the 
+    // list as accounts change their Status structs
+
+    // It also keeps track of the current epoch for efficiency (to prevent repeated
+    // queries to LibraBlock)
+    resource struct AccountList {
+      accounts: vector<address>,
+      current_epoch: u64,
+    }
+
+    // This is the structure of each Payment struct which represents one automatic
+    // payment held by an account
+    struct Payment {
+      // TODO: name should be a string to store a memo
+      // name: u64,
+      uid: u64,
+      payee: address,
+      end_epoch: u64,  // end epoch is inclusive
+      percentage: u64,
+    }
+
+}
+

@@ -139,15 +139,15 @@ use 0x1::GAS::GAS;
 //! new-transaction
 //! sender: alice
 script {
-  use 0x1::AutoPay;
+  use 0x1::AutoPay2;
   use 0x1::Signer;
   fun main(sender: &signer) {
-    AutoPay::enable_autopay(sender);
-    assert(AutoPay::is_enabled(Signer::address_of(sender)), 0);
+    AutoPay2::enable_autopay(sender);
+    assert(AutoPay2::is_enabled(Signer::address_of(sender)), 0);
     
-    AutoPay::create_instruction(sender, 1, 0, {{jim}}, 2, 5);
+    AutoPay2::create_instruction(sender, 1, 0, {{jim}}, 2, 5);
 
-    let (type, payee, end_epoch, percentage) = AutoPay::query_instruction(Signer::address_of(sender), 1);
+    let (type, payee, end_epoch, percentage) = AutoPay2::query_instruction(Signer::address_of(sender), 1);
     assert(type == 0, 1);
     assert(payee == {{jim}}, 1);
     assert(end_epoch == 2, 1);
@@ -160,15 +160,15 @@ script {
 //! new-transaction
 //! sender: lucy
 script {
-  use 0x1::AutoPay;
+  use 0x1::AutoPay2;
   use 0x1::Signer;
   fun main(sender: &signer) {
-    AutoPay::enable_autopay(sender);
-    assert(AutoPay::is_enabled(Signer::address_of(sender)), 0);
+    AutoPay2::enable_autopay(sender);
+    assert(AutoPay2::is_enabled(Signer::address_of(sender)), 0);
     
-    AutoPay::create_instruction(sender, 1, 1, {{paul}}, 2, 5);
+    AutoPay2::create_instruction(sender, 1, 1, {{paul}}, 2, 5);
 
-    let (type, payee, end_epoch, percentage) = AutoPay::query_instruction(Signer::address_of(sender), 1);
+    let (type, payee, end_epoch, percentage) = AutoPay2::query_instruction(Signer::address_of(sender), 1);
     assert(type == 1, 1);
     assert(payee == {{paul}}, 1);
     assert(end_epoch == 2, 1);
@@ -181,15 +181,15 @@ script {
 //! new-transaction
 //! sender: thomas
 script {
-  use 0x1::AutoPay;
+  use 0x1::AutoPay2;
   use 0x1::Signer;
   fun main(sender: &signer) {
-    AutoPay::enable_autopay(sender);
-    assert(AutoPay::is_enabled(Signer::address_of(sender)), 0);
+    AutoPay2::enable_autopay(sender);
+    assert(AutoPay2::is_enabled(Signer::address_of(sender)), 0);
     
-    AutoPay::create_instruction(sender, 1, 2, {{denice}}, 2, 200);
+    AutoPay2::create_instruction(sender, 1, 2, {{denice}}, 2, 200);
 
-    let (type, payee, end_epoch, percentage) = AutoPay::query_instruction(Signer::address_of(sender), 1);
+    let (type, payee, end_epoch, percentage) = AutoPay2::query_instruction(Signer::address_of(sender), 1);
     assert(type == 2, 1);
     assert(payee == {{denice}}, 1);
     assert(end_epoch == 2, 1);
@@ -202,16 +202,16 @@ script {
 //! new-transaction
 //! sender: carlos
 script {
-  use 0x1::AutoPay;
+  use 0x1::AutoPay2;
   use 0x1::Signer;
   fun main(sender: &signer) {
-    AutoPay::enable_autopay(sender);
-    assert(AutoPay::is_enabled(Signer::address_of(sender)), 0);
+    AutoPay2::enable_autopay(sender);
+    assert(AutoPay2::is_enabled(Signer::address_of(sender)), 0);
     
     // note: end epoch does not matter here as long as it is after the next epoch
-    AutoPay::create_instruction(sender, 1, 3, {{eric}}, 200, 500);
+    AutoPay2::create_instruction(sender, 1, 3, {{eric}}, 200, 500);
 
-    let (type, payee, end_epoch, percentage) = AutoPay::query_instruction(Signer::address_of(sender), 1);
+    let (type, payee, end_epoch, percentage) = AutoPay2::query_instruction(Signer::address_of(sender), 1);
     assert(type == 3, 1);
     assert(payee == {{eric}}, 1);
     assert(end_epoch == 200, 1);
@@ -244,7 +244,7 @@ script {
 //! new-transaction
 //! sender: libraroot
 script {
-  use 0x1::AutoPay;
+  use 0x1::AutoPay2;
   use 0x1::LibraAccount;
   use 0x1::GAS::GAS;
   use 0x1::Libra;
@@ -262,7 +262,7 @@ script {
     let ending_balance = LibraAccount::balance<GAS>({{carlos}});
     assert(ending_balance == 9500, 7357006);
     //Confirm the one-shot pledge was deleted
-    let (type, payee, end_epoch, percentage) = AutoPay::query_instruction({{carlos}}, 1);
+    let (type, payee, end_epoch, percentage) = AutoPay2::query_instruction({{carlos}}, 1);
     assert(type == 0, 1);
     assert(payee == 0x0, 1);
     assert(end_epoch == 0, 1);
@@ -315,7 +315,7 @@ script {
 script {
   use 0x1::LibraAccount;
   use 0x1::GAS::GAS;
-  use 0x1::AutoPay;
+  use 0x1::AutoPay2;
   fun main(_vm: &signer) {
     let ending_balance = LibraAccount::balance<GAS>({{alice}});
     assert(ending_balance == 9026, 7357004);
@@ -346,19 +346,19 @@ script {
 
     //all pledges should be deleted as they expired in epoch 2, check to confirm
     //Confirm the one-shot pledge was deleted
-    let (type, payee, end_epoch, percentage) = AutoPay::query_instruction({{alice}}, 1);
+    let (type, payee, end_epoch, percentage) = AutoPay2::query_instruction({{alice}}, 1);
     assert(type == 0, 1);
     assert(payee == 0x0, 1);
     assert(end_epoch == 0, 1);
     assert(percentage == 0, 1);
 
-    let (type, payee, end_epoch, percentage) = AutoPay::query_instruction({{lucy}}, 1);
+    let (type, payee, end_epoch, percentage) = AutoPay2::query_instruction({{lucy}}, 1);
     assert(type == 0, 1);
     assert(payee == 0x0, 1);
     assert(end_epoch == 0, 1);
     assert(percentage == 0, 1);
 
-    let (type, payee, end_epoch, percentage) = AutoPay::query_instruction({{thomas}}, 1);
+    let (type, payee, end_epoch, percentage) = AutoPay2::query_instruction({{thomas}}, 1);
     assert(type == 0, 1);
     assert(payee == 0x0, 1);
     assert(end_epoch == 0, 1);

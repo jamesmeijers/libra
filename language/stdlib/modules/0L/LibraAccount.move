@@ -907,7 +907,7 @@ module LibraAccount {
         ensures spec_holds_own_withdraw_cap(cap_addr);
     }
     
-    // 0L function for AutoPay module
+    // 0L function for AutoPay2 module
     // 0L error suffix 120101
 
 

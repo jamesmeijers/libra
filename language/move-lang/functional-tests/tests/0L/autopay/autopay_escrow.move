@@ -64,22 +64,22 @@ fun main(lr: &signer, greg_account: &signer) {
 //! new-transaction
 //! sender: alice
 script {
-  use 0x1::AutoPay;
+  use 0x1::AutoPay2;
   use 0x1::Signer;
   fun main(sender: &signer) {
-    AutoPay::enable_autopay(sender);
-    assert(AutoPay::is_enabled(Signer::address_of(sender)), 0);
+    AutoPay2::enable_autopay(sender);
+    assert(AutoPay2::is_enabled(Signer::address_of(sender)), 0);
     
-    AutoPay::create_instruction(sender, 1, 2, {{bob}}, 2, 50);
-    AutoPay::create_instruction(sender, 2, 2, {{greg}}, 2, 50);
+    AutoPay2::create_instruction(sender, 1, 2, {{bob}}, 2, 50);
+    AutoPay2::create_instruction(sender, 2, 2, {{greg}}, 2, 50);
 
-    let (type, payee, end_epoch, amt) = AutoPay::query_instruction(Signer::address_of(sender), 1);
+    let (type, payee, end_epoch, amt) = AutoPay2::query_instruction(Signer::address_of(sender), 1);
     assert(type == 2, 1);
     assert(payee == {{bob}}, 1);
     assert(end_epoch == 2, 1);
     assert(amt == 50, 1);
 
-    let (type, payee, end_epoch, amt) = AutoPay::query_instruction(Signer::address_of(sender), 2);
+    let (type, payee, end_epoch, amt) = AutoPay2::query_instruction(Signer::address_of(sender), 2);
     assert(type == 2, 1);
     assert(payee == {{greg}}, 1);
     assert(end_epoch == 2, 1);
