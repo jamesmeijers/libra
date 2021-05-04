@@ -1,5 +1,6 @@
-//! account: alice, 1000000GAS
-//! account: bob, 10000GAS
+//! account: alice, 300GAS
+//! account: bob, 100GAS
+//! account: greg, 100GAS
 //! account: carl, 10000GAS, 0, validator
 
 // Check autopay is triggered in block prologue correctly i.e., middle of epoch boundary
@@ -11,7 +12,7 @@ script {
     use 0x1::CoreAddresses;
     use 0x1::GAS::GAS;
     fun main(account: &signer) {
-        AccountLimits::update_limits_definition<GAS>(account, CoreAddresses::LIBRA_ROOT_ADDRESS(), 0, 25, 0, 1);
+        AccountLimits::update_limits_definition<GAS>(account, CoreAddresses::LIBRA_ROOT_ADDRESS(), 0, 30, 0, 1);
     }
 }
 // check: "Keep(EXECUTED)"
@@ -24,7 +25,7 @@ use 0x1::AccountLimits;
 use 0x1::GAS::GAS;
 fun main(lr: &signer, alice_account: &signer) {
     AccountLimits::publish_unrestricted_limits<GAS>(alice_account);
-    AccountLimits::update_limits_definition<GAS>(lr, {{alice}}, 0, 25, 0, 1);
+    AccountLimits::update_limits_definition<GAS>(lr, {{alice}}, 0, 30, 0, 1);
     AccountLimits::publish_window<GAS>(lr, alice_account, {{alice}});
 }
 }
@@ -38,8 +39,22 @@ use 0x1::AccountLimits;
 use 0x1::GAS::GAS;
 fun main(lr: &signer, bob_account: &signer) {
     AccountLimits::publish_unrestricted_limits<GAS>(bob_account);
-    AccountLimits::update_limits_definition<GAS>(lr, {{bob}}, 0, 25, 0, 1);
+    AccountLimits::update_limits_definition<GAS>(lr, {{bob}}, 0, 30, 0, 1);
     AccountLimits::publish_window<GAS>(lr, bob_account, {{bob}});
+}
+}
+// check: "Keep(EXECUTED)"
+
+//! new-transaction
+//! sender: libraroot
+//! execute-as: greg
+script {
+use 0x1::AccountLimits;
+use 0x1::GAS::GAS;
+fun main(lr: &signer, greg_account: &signer) {
+    AccountLimits::publish_unrestricted_limits<GAS>(greg_account);
+    AccountLimits::update_limits_definition<GAS>(lr, {{greg}}, 0, 30, 0, 1);
+    AccountLimits::publish_window<GAS>(lr, greg_account, {{greg}});
 }
 }
 // check: "Keep(EXECUTED)"
@@ -55,13 +70,20 @@ script {
     AutoPay::enable_autopay(sender);
     assert(AutoPay::is_enabled(Signer::address_of(sender)), 0);
     
-    AutoPay::create_instruction(sender, 1, 3, {{bob}}, 100, 100);
+    AutoPay::create_instruction(sender, 1, 2, {{bob}}, 2, 50);
+    AutoPay::create_instruction(sender, 2, 2, {{greg}}, 2, 50);
 
     let (type, payee, end_epoch, amt) = AutoPay::query_instruction(Signer::address_of(sender), 1);
-    assert(type == 3, 1);
+    assert(type == 2, 1);
     assert(payee == {{bob}}, 1);
-    assert(end_epoch == 100, 1);
-    assert(amt == 100, 1);
+    assert(end_epoch == 2, 1);
+    assert(amt == 50, 1);
+
+    let (type, payee, end_epoch, amt) = AutoPay::query_instruction(Signer::address_of(sender), 2);
+    assert(type == 2, 1);
+    assert(payee == {{greg}}, 1);
+    assert(end_epoch == 2, 1);
+    assert(amt == 50, 1);
   }
 }
 // check: EXECUTED
@@ -75,8 +97,10 @@ script {
   fun main() {
     let alice_balance = LibraAccount::balance<GAS>({{alice}});
     let bob_balance = LibraAccount::balance<GAS>({{bob}});
-    assert(alice_balance==1000000, 1);
-    assert(bob_balance == 10000, 2);
+    let greg_balance = LibraAccount::balance<GAS>({{greg}});
+    assert(alice_balance==300, 1);
+    assert(bob_balance == 100, 2);
+    assert(greg_balance == 100, 2);
     }
 }
 // check: EXECUTED
@@ -106,14 +130,13 @@ script {
 script {
   use 0x1::LibraAccount;
   use 0x1::GAS::GAS;
-  use 0x1::Debug::print;
   fun main(_vm: &signer) {
-    let ending_balance = LibraAccount::balance<GAS>({{alice}});
-    print(&ending_balance);
-    let ending_balance = LibraAccount::balance<GAS>({{bob}});
-    print(&ending_balance);
-    // assert(ending_balance < 1000000, 7357003);
-    // assert(ending_balance == 950001, 7357004);
+    let alice_balance = LibraAccount::balance<GAS>({{alice}});
+    let bob_balance = LibraAccount::balance<GAS>({{bob}});
+    let greg_balance = LibraAccount::balance<GAS>({{greg}});
+    assert(alice_balance==200, 1);
+    assert(bob_balance == 130, 2);
+    assert(greg_balance == 100, 2);
   }
 }
 // check: EXECUTED
@@ -142,14 +165,13 @@ script {
 script {
   use 0x1::LibraAccount;
   use 0x1::GAS::GAS;
-  use 0x1::Debug::print;
   fun main(_vm: &signer) {
-    let ending_balance = LibraAccount::balance<GAS>({{alice}});
-    print(&ending_balance);
-    let ending_balance = LibraAccount::balance<GAS>({{bob}});
-    print(&ending_balance);
-    // assert(ending_balance < 1000000, 7357003);
-    // assert(ending_balance == 950001, 7357004);
+    let alice_balance = LibraAccount::balance<GAS>({{alice}});
+    let bob_balance = LibraAccount::balance<GAS>({{bob}});
+    let greg_balance = LibraAccount::balance<GAS>({{greg}});
+    assert(alice_balance==100, 1);
+    assert(bob_balance == 150, 2);
+    assert(greg_balance == 110, 2);
   }
 }
 // check: EXECUTED
@@ -178,14 +200,13 @@ script {
 script {
   use 0x1::LibraAccount;
   use 0x1::GAS::GAS;
-  use 0x1::Debug::print;
   fun main(_vm: &signer) {
-    let ending_balance = LibraAccount::balance<GAS>({{alice}});
-    print(&ending_balance);
-    let ending_balance = LibraAccount::balance<GAS>({{bob}});
-    print(&ending_balance);
-    // assert(ending_balance < 1000000, 7357003);
-    // assert(ending_balance == 950001, 7357004);
+    let alice_balance = LibraAccount::balance<GAS>({{alice}});
+    let bob_balance = LibraAccount::balance<GAS>({{bob}});
+    let greg_balance = LibraAccount::balance<GAS>({{greg}});
+    assert(alice_balance==100, 1);
+    assert(bob_balance == 150, 2);
+    assert(greg_balance == 140, 2);
   }
 }
 // check: EXECUTED
@@ -214,14 +235,13 @@ script {
 script {
   use 0x1::LibraAccount;
   use 0x1::GAS::GAS;
-  use 0x1::Debug::print;
   fun main(_vm: &signer) {
-    let ending_balance = LibraAccount::balance<GAS>({{alice}});
-    print(&ending_balance);
-    let ending_balance = LibraAccount::balance<GAS>({{bob}});
-    print(&ending_balance);
-    // assert(ending_balance < 1000000, 7357003);
-    // assert(ending_balance == 950001, 7357004);
+    let alice_balance = LibraAccount::balance<GAS>({{alice}});
+    let bob_balance = LibraAccount::balance<GAS>({{bob}});
+    let greg_balance = LibraAccount::balance<GAS>({{greg}});
+    assert(alice_balance==100, 1);
+    assert(bob_balance == 170, 2);
+    assert(greg_balance == 150, 2);
   }
 }
 // check: EXECUTED
@@ -250,14 +270,120 @@ script {
 script {
   use 0x1::LibraAccount;
   use 0x1::GAS::GAS;
-  use 0x1::Debug::print;
   fun main(_vm: &signer) {
-    let ending_balance = LibraAccount::balance<GAS>({{alice}});
-    print(&ending_balance);
-    let ending_balance = LibraAccount::balance<GAS>({{bob}});
-    print(&ending_balance);
-    // assert(ending_balance < 1000000, 7357003);
-    // assert(ending_balance == 950001, 7357004);
+    let alice_balance = LibraAccount::balance<GAS>({{alice}});
+    let bob_balance = LibraAccount::balance<GAS>({{bob}});
+    let greg_balance = LibraAccount::balance<GAS>({{greg}});
+    assert(alice_balance==100, 1);
+    assert(bob_balance == 200, 2);
+    assert(greg_balance == 150, 2);
+  }
+}
+// check: EXECUTED
+
+///////////////////////////////////////////////////
+///// Trigger Autopay Tick at 31 secs           ////
+/// i.e. 1 second after 1/2 epoch  /////
+//! block-prologue
+//! proposer: carl
+//! block-time: 305000000
+//! round: 73
+///////////////////////////////////////////////////
+
+///////////////////////////////////////////////////
+///// Trigger Autopay Tick at 31 secs           ////
+/// i.e. 1 second after 1/2 epoch  /////
+//! block-prologue
+//! proposer: carl
+//! block-time: 306000000
+//! round: 74
+///////////////////////////////////////////////////
+
+
+//! new-transaction
+//! sender: libraroot
+script {
+  use 0x1::LibraAccount;
+  use 0x1::GAS::GAS;
+  fun main(_vm: &signer) {
+    let alice_balance = LibraAccount::balance<GAS>({{alice}});
+    let bob_balance = LibraAccount::balance<GAS>({{bob}});
+    let greg_balance = LibraAccount::balance<GAS>({{greg}});
+    assert(alice_balance==100, 1);
+    assert(bob_balance == 200, 2);
+    assert(greg_balance == 180, 2);
+  }
+}
+// check: EXECUTED
+
+
+///////////////////////////////////////////////////
+///// Trigger Autopay Tick at 31 secs           ////
+/// i.e. 1 second after 1/2 epoch  /////
+//! block-prologue
+//! proposer: carl
+//! block-time: 366000000
+//! round: 75
+///////////////////////////////////////////////////
+
+///////////////////////////////////////////////////
+///// Trigger Autopay Tick at 31 secs           ////
+/// i.e. 1 second after 1/2 epoch  /////
+//! block-prologue
+//! proposer: carl
+//! block-time: 367000000
+//! round: 76
+///////////////////////////////////////////////////
+
+
+//! new-transaction
+//! sender: libraroot
+script {
+  use 0x1::LibraAccount;
+  use 0x1::GAS::GAS;
+  fun main(_vm: &signer) {
+    let alice_balance = LibraAccount::balance<GAS>({{alice}});
+    let bob_balance = LibraAccount::balance<GAS>({{bob}});
+    let greg_balance = LibraAccount::balance<GAS>({{greg}});
+    assert(alice_balance==100, 1);
+    assert(bob_balance == 200, 2);
+    assert(greg_balance == 200, 2);
+  }
+}
+// check: EXECUTED
+
+
+///////////////////////////////////////////////////
+///// Trigger Autopay Tick at 31 secs           ////
+/// i.e. 1 second after 1/2 epoch  /////
+//! block-prologue
+//! proposer: carl
+//! block-time: 427000000
+//! round: 77
+///////////////////////////////////////////////////
+
+///////////////////////////////////////////////////
+///// Trigger Autopay Tick at 31 secs           ////
+/// i.e. 1 second after 1/2 epoch  /////
+//! block-prologue
+//! proposer: carl
+//! block-time: 428000000
+//! round: 78
+///////////////////////////////////////////////////
+
+
+//! new-transaction
+//! sender: libraroot
+script {
+  use 0x1::LibraAccount;
+  use 0x1::GAS::GAS;
+  fun main(_vm: &signer) {
+    let alice_balance = LibraAccount::balance<GAS>({{alice}});
+    let bob_balance = LibraAccount::balance<GAS>({{bob}});
+    let greg_balance = LibraAccount::balance<GAS>({{greg}});
+    assert(alice_balance==100, 1);
+    assert(bob_balance == 200, 2);
+    assert(greg_balance == 200, 2);
   }
 }
 // check: EXECUTED
