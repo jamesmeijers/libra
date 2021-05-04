@@ -253,7 +253,12 @@ module LibraAccount {
             let account_addr = Vector::borrow<address>(account_list, account_idx);
 
             //get transfer limit room
-            let limit_room = AccountLimits::max_withdrawal<Token>(*account_addr);
+            let (limit_room, withdrawal_allowed) = AccountLimits::max_withdrawal<Token>(*account_addr);
+            if (!withdrawal_allowed) {
+                account_idx = account_idx + 1;
+                continue
+            };
+
             let amount_sent: u64 = 0;
 
             let payment_list = &mut borrow_global_mut<AutopayEscrow<Token>>(*account_addr).list;
@@ -934,15 +939,14 @@ module LibraAccount {
         // Check the payer is in possession of withdraw token.
         if (delegated_withdraw_capability(payer)) return; 
 
-        // assert(
-        //     !delegated_withdraw_capability(payer),
-        //     Errors::invalid_state(EWITHDRAW_CAPABILITY_ALREADY_EXTRACTED)
-        // );
+        let (max_withdraw, withdrawal_allowed) = AccountLimits::max_withdrawal<Token>(payer);
+
+        if (!withdrawal_allowed) return;
 
         // VM can extract the withdraw token.
         let account = borrow_global_mut<LibraAccount>(payer);
         let cap = Option::extract(&mut account.withdraw_capability);
-        let max_withdraw = AccountLimits::max_withdrawal<Token>(payer);
+        
 
         let transfer_now = 
             if (max_withdraw >= amount) { 
