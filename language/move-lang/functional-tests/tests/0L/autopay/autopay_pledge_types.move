@@ -10,6 +10,131 @@
 
 // test runs various autopay pledge types to ensure they are being executed as expected
 
+//! new-transaction
+//! sender: libraroot
+script {
+    use 0x1::AccountLimits;
+    use 0x1::CoreAddresses;
+    use 0x1::GAS::GAS;
+    fun main(account: &signer) {
+        AccountLimits::update_limits_definition<GAS>(account, CoreAddresses::LIBRA_ROOT_ADDRESS(), 0, 10000, 0, 1);
+    }
+}
+// check: "Keep(EXECUTED)"
+
+//! new-transaction
+//! sender: libraroot
+//! execute-as: alice
+script {
+use 0x1::AccountLimits;
+use 0x1::GAS::GAS;
+  fun main(lr: &signer, alice_account: &signer) {
+      AccountLimits::publish_unrestricted_limits<GAS>(alice_account);
+      AccountLimits::update_limits_definition<GAS>(lr, {{alice}}, 0, 10000, 0, 1);
+      AccountLimits::publish_window<GAS>(lr, alice_account, {{alice}});
+  }
+}
+// check: "Keep(EXECUTED)"
+
+//! new-transaction
+//! sender: libraroot
+//! execute-as: jim
+script {
+use 0x1::AccountLimits;
+use 0x1::GAS::GAS;
+  fun main(lr: &signer, jim_account: &signer) {
+      AccountLimits::publish_unrestricted_limits<GAS>(jim_account);
+      AccountLimits::update_limits_definition<GAS>(lr, {{jim}}, 0, 10000, 0, 1);
+      AccountLimits::publish_window<GAS>(lr, jim_account, {{jim}});
+  }
+}
+// check: "Keep(EXECUTED)"
+
+//! new-transaction
+//! sender: libraroot
+//! execute-as: lucy
+script {
+use 0x1::AccountLimits;
+use 0x1::GAS::GAS;
+  fun main(lr: &signer, lucy_account: &signer) {
+      AccountLimits::publish_unrestricted_limits<GAS>(lucy_account);
+      AccountLimits::update_limits_definition<GAS>(lr, {{lucy}}, 0, 10000, 0, 1);
+      AccountLimits::publish_window<GAS>(lr, lucy_account, {{lucy}});
+  }
+}
+// check: "Keep(EXECUTED)"
+
+//! new-transaction
+//! sender: libraroot
+//! execute-as: paul
+script {
+use 0x1::AccountLimits;
+use 0x1::GAS::GAS;
+  fun main(lr: &signer, paul_account: &signer) {
+      AccountLimits::publish_unrestricted_limits<GAS>(paul_account);
+      AccountLimits::update_limits_definition<GAS>(lr, {{paul}}, 0, 10000, 0, 1);
+      AccountLimits::publish_window<GAS>(lr, paul_account, {{paul}});
+  }
+}
+// check: "Keep(EXECUTED)"
+
+//! new-transaction
+//! sender: libraroot
+//! execute-as: thomas
+script {
+use 0x1::AccountLimits;
+use 0x1::GAS::GAS;
+  fun main(lr: &signer, thomas_account: &signer) {
+      AccountLimits::publish_unrestricted_limits<GAS>(thomas_account);
+      AccountLimits::update_limits_definition<GAS>(lr, {{thomas}}, 0, 10000, 0, 1);
+      AccountLimits::publish_window<GAS>(lr, thomas_account, {{thomas}});
+  }
+}
+// check: "Keep(EXECUTED)"
+
+//! new-transaction
+//! sender: libraroot
+//! execute-as: denice
+script {
+use 0x1::AccountLimits;
+use 0x1::GAS::GAS;
+  fun main(lr: &signer, denice_account: &signer) {
+      AccountLimits::publish_unrestricted_limits<GAS>(denice_account);
+      AccountLimits::update_limits_definition<GAS>(lr, {{denice}}, 0, 10000, 0, 1);
+      AccountLimits::publish_window<GAS>(lr, denice_account, {{denice}});
+  }
+}
+// check: "Keep(EXECUTED)"
+
+//! new-transaction
+//! sender: libraroot
+//! execute-as: carlos
+script {
+use 0x1::AccountLimits;
+use 0x1::GAS::GAS;
+  fun main(lr: &signer, carlos_account: &signer) {
+      AccountLimits::publish_unrestricted_limits<GAS>(carlos_account);
+      AccountLimits::update_limits_definition<GAS>(lr, {{carlos}}, 0, 10000, 0, 1);
+      AccountLimits::publish_window<GAS>(lr, carlos_account, {{carlos}});
+  }
+}
+// check: "Keep(EXECUTED)"
+
+//! new-transaction
+//! sender: libraroot
+//! execute-as: eric
+script {
+use 0x1::AccountLimits;
+use 0x1::GAS::GAS;
+  fun main(lr: &signer, eric_account: &signer) {
+      AccountLimits::publish_unrestricted_limits<GAS>(eric_account);
+      AccountLimits::update_limits_definition<GAS>(lr, {{eric}}, 0, 10000, 0, 1);
+      AccountLimits::publish_window<GAS>(lr, eric_account, {{eric}});
+  }
+}
+// check: "Keep(EXECUTED)"
+
+
 // alice commits to paying jim 5% of her worth per epoch
 //! new-transaction
 //! sender: alice
