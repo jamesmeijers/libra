@@ -52,6 +52,30 @@ module FIFO {
         Vector::length<Element>(& v.outgoing) + Vector::length<Element>(& v.incoming)
     }
 
+    //this function does not index the elements in any particular order
+    //as such it should only be used for searching through the whole FIFO
+    public fun borrow<Element>(v: &FIFO<Element>, i: u64): &Element {
+        //if i is out of bounds that will be caught by the underlying vector module
+        let len = Vector::length<Element>(&v.incoming);
+        if (i < len) {
+            Vector::borrow<Element>(&v.incoming, i)
+        }
+        else {
+            Vector::borrow<Element>(&v.outgoing, i - len)
+        }
+    }
+
+    public fun borrow_mut<Element>(v: &mut FIFO<Element>, i: u64): &mut Element {
+        //if i is out of bounds that will be caught by the underlying vector module
+        let len = Vector::length<Element>(&v.incoming);
+        if (i < len) {
+            Vector::borrow_mut<Element>(&mut v.incoming, i)
+        }
+        else {
+            Vector::borrow_mut<Element>(&mut v.outgoing, i - len)
+        }
+    }
+
     fun perform_swap<Element>(v: &mut FIFO<Element>) {
         if (Vector::length<Element>(& v.outgoing) == 0) {
             //TODO: Add a proper error here, can't pop from an empty FIFO
