@@ -43,18 +43,19 @@ address 0x1{
     }
 
     resource struct EthBridge{
-      operator_queue: FIFO<Details>,
+      operator_queue: FIFO<Incoming>,
       challenge_queue: FIFO<vote>,
-      balance: Libra::Libra<GAS>
+      id: u64,
+      balance: Libra::Libra<GAS>,
+      incoming_handle: Event::EventHandle<Incoming>,
+      outgoing_handle: Event::EventHandle<Outgoing> 
     }
 
     resource struct Outgoing_Event_Handle { 
       h: Event::EventHandle<Outgoing> 
     }
 
-    resource struct id_counter {
-      id: u64
-    }
+
 
     public fun deposit (sender: &signer, eth_recipient: vector<u8>, coin: Libra::Libra<GAS>) {
 
@@ -86,6 +87,15 @@ address 0x1{
     public fun initialize_eth_bridge (vm: &signer) {
       CoreAddresses::assert_libra_root(vm);
 
+      move_to<EthBridge>(vm, EthBridge{
+        operator_queue: FIFO::empty<Incoming>(),
+        challenge_queue: FIFO::empty<vote>(),
+        id: 1,
+        balance: Libra::zero<GAS>(),
+        incoming_handle: Event::new_event_handle<Incoming>(vm),
+        outgoing_handle: Event::new_event_handle<Outgoing>(vm),
+      });
+      
     }
 
     fun is_updater (id: address) {
