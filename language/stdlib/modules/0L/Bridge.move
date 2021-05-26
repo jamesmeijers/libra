@@ -21,7 +21,6 @@ address 0x1{
       time: u64,
       ol_party: address,
       eth_party: vector<u8>,
-      outgoing: bool,
       value: u64,
       challenged: bool,
     }
@@ -31,7 +30,6 @@ address 0x1{
       time: u64,
       ol_party: address,
       eth_party: vector<u8>,
-      outgoing: bool,
       value: u64,
     }
 
@@ -43,7 +41,7 @@ address 0x1{
     }
 
     resource struct EthBridge{
-      operator_queue: FIFO<Incoming>,
+      incoming_queue: FIFO<Incoming>,
       challenge_queue: FIFO<vote>,
       id: u64,
       balance: Libra::Libra<GAS>,
@@ -51,13 +49,23 @@ address 0x1{
       outgoing_handle: Event::EventHandle<Outgoing> 
     }
 
-    resource struct Outgoing_Event_Handle { 
-      h: Event::EventHandle<Outgoing> 
-    }
 
 
+    public fun deposit (sender: &signer, eth_recipient: vector<u8>, coin: Libra::Libra<GAS>) acquires EthBridge {
 
-    public fun deposit (sender: &signer, eth_recipient: vector<u8>, coin: Libra::Libra<GAS>) {
+      let id = get_next_id ();
+      let state = borrow_global_mut<EthBridge>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+      
+      let tx_details = Outgoing {
+        id: id,
+        time: 0, //TODO: how to get the time?
+        ol_party: Signer::address_of(sender),
+        eth_party: eth_recipient,
+        value: Libra::value<GAS>(&coin)
+      });
+      Libra::deposit(&mut state.balance, coin);
+
+      Event::emit_event<Outgoing> (&mut state.outgoing_handle, tx_details);
 
     }
 
@@ -65,11 +73,34 @@ address 0x1{
       addr = Signer::address_of(updater);
       assert(is_updater(addr), 1);
 
+      let id = get_next_id ();
+      let state = borrow_global_mut<EthBridge>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+
+      let tx_details = Incoming {
+        id: id,
+        time: 0, //TODO: how to get the time?
+        ol_party: ol_recipient,
+        eth_party: eth_sender,
+        value: value,
+        challenged: false,
+      });
+
+      let tx_details_event = *& tx_details;
+
+      FIFO::push<Incoming> (&mut state.incoming_queue, tx_details);
+      Event::emit_event<Incoming> (&mut state.incoming_handle, tx_details_event);
+
     }
 
     public fun challenge (operator: &signer, id: u64) {
       addr = Signer::address_of(operator);
       assert(is_operator(addr), 1);
+
+      let state = borrow_global_mut<EthBridge>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+      let i = 0;
+      let l = FIFO::len<Incoming>(& state.incoming_queue);
+
+      
 
     }
 
@@ -88,7 +119,7 @@ address 0x1{
       CoreAddresses::assert_libra_root(vm);
 
       move_to<EthBridge>(vm, EthBridge{
-        operator_queue: FIFO::empty<Incoming>(),
+        incoming_queue: FIFO::empty<Incoming>(),
         challenge_queue: FIFO::empty<vote>(),
         id: 1,
         balance: Libra::zero<GAS>(),
@@ -102,8 +133,15 @@ address 0x1{
 
     }
 
-    fun is operator (id: address) {
+    fun is_operator (id: address) {
 
+    }
+
+    fun get_next_id (): u64 acquires EthBridge {
+      let state = borrow_global_mut<EthBridge>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+      i = state.id;
+      state.id = state.id + 1;
+      i
     }
 
 
