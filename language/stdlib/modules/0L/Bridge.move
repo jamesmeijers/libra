@@ -1,7 +1,7 @@
 
 /////////////////////////////////////////////////////////////////////////
 // 0L Module
-// Demo Persistence
+// Ethereum Bridge Implementation
 /////////////////////////////////////////////////////////////////////////
 
 address 0x1{
@@ -14,10 +14,91 @@ address 0x1{
     use 0x1::Signer;
     use 0x1::LibraAccount;
     use 0x1::Event;
+    use 0x1::FIFO;
 
-    struct AnEvent { i: u64 }
-    resource struct Handle { h: Event::EventHandle<AnEvent> }
+    struct Incoming {
+      id: u64,
+      time: u64,
+      ol_party: address,
+      eth_party: vector<u8>,
+      outgoing: bool,
+      value: u64,
+      challenged: bool,
+    }
 
+    struct Outgoing {
+      id: u64,
+      time: u64,
+      ol_party: address,
+      eth_party: vector<u8>,
+      outgoing: bool,
+      value: u64,
+    }
+
+    struct vote {
+      tx: Incoming, 
+      voted: vector<address>,
+      for: u64,
+      against: u64,
+    }
+
+    resource struct EthBridge{
+      operator_queue: FIFO<Details>,
+      challenge_queue: FIFO<vote>,
+      balance: Libra::Libra<GAS>
+    }
+
+    resource struct Outgoing_Event_Handle { 
+      h: Event::EventHandle<Outgoing> 
+    }
+
+    resource struct id_counter {
+      id: u64
+    }
+
+    public fun deposit (sender: &signer, eth_recipient: vector<u8>, coin: Libra::Libra<GAS>) {
+
+    }
+
+    public fun refund (updater: &signer, ol_recipient: address, eth_sender: vector<u8>, value: u64) {
+      addr = Signer::address_of(updater);
+      assert(is_updater(addr), 1);
+
+    }
+
+    public fun challenge (operator: &signer, id: u64) {
+      addr = Signer::address_of(operator);
+      assert(is_operator(addr), 1);
+
+    }
+
+    public fun vote (operator: &signer, id: u64, is_correct: bool) {
+      addr = Signer::address_of(operator);
+      assert(is_operator(addr), 1);
+
+    }
+
+    public fun process_queues (vm: &signer) {
+      CoreAddresses::assert_libra_root(vm);
+
+    }
+
+    public fun initialize_eth_bridge (vm: &signer) {
+      CoreAddresses::assert_libra_root(vm);
+
+    }
+
+    fun is_updater (id: address) {
+
+    }
+
+    fun is operator (id: address) {
+
+    }
+
+
+
+    /*
     public fun init_handle(sender: &signer) {
       let account = Signer::address_of(sender);
       if (!exists<Handle>(account)) {
@@ -36,19 +117,9 @@ address 0x1{
 
 
     // TODO: Demoware, Change this to EventHandle
-    resource struct EthBridge{
-      lock_history: vector<Details>,
-      unlock_history: vector<Details>,
-      queue_unlock: vector<Details>,
-      balance: Libra::Libra<GAS>
-    }
+    
 
-    struct Details {
-      ol_party: address,
-      eth_party: vector<u8>,
-      outgoing: bool,
-      value: u64,
-    }
+    
 
     public fun initialize_eth(vm: &signer){
       assert(is_testnet(), 01);
@@ -112,5 +183,7 @@ address 0x1{
       Vector::remove<Details>(&mut state.queue_unlock, i);
       Vector::push_back<Details>(&mut state.unlock_history, details);
     }
+
+    */
   }
 }
