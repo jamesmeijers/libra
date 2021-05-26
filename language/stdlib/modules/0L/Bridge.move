@@ -100,13 +100,45 @@ address 0x1{
       let i = 0;
       let l = FIFO::len<Incoming>(& state.incoming_queue);
 
-      
+      while (i < l) {
+        let tx = FIFO::borrow_mut<Incoming>(& state.incoming_queue, i);
+        if (tx.id == id) {
+          tx.challenged = true;
+          break
+        }
+        i = i + 1;
+      };
+      //should not reach this point, if you have, id did not exist in the queue.
+      assert(false, 1);
 
     }
 
     public fun vote (operator: &signer, id: u64, is_correct: bool) {
       addr = Signer::address_of(operator);
       assert(is_operator(addr), 1);
+
+      let state = borrow_global_mut<EthBridge>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+      let i = 0;
+      let l = FIFO::len<vote>(& state.challenge_queue);
+
+      while (i < l) {
+        tx = FIFO::borrow_mut<vote>(& state.challenge_queue, i);
+        if (tx.tx.id == id) {
+          assert (!Vector::contains<address>(& tx.voted, addr), 1);
+          Vector::push_back<address> (&mut tx.voted, addr);
+          if (is_correct == true) {
+            tx.for = tx.for + 1;
+          }
+          else {
+            tx.against = tx_against + 1;
+          };
+
+          break
+        }
+        i = i + 1;
+      };
+      //should not reach this point, if you have, id did not exist in the queue.
+      assert(false, 1);
 
     }
 
