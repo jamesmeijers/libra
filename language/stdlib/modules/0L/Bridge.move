@@ -38,6 +38,7 @@ address 0x1{
       voted: vector<address>,
       for: u64,
       against: u64,
+      challenger: address,
     }
 
     resource struct EthBridge{
@@ -104,6 +105,14 @@ address 0x1{
         let tx = FIFO::borrow_mut<Incoming>(& state.incoming_queue, i);
         if (tx.id == id) {
           tx.challenged = true;
+          let new_vote = vote_tally {
+            tx: *tx,
+            voted: Vector::empty<address>(),
+            for: 0,
+            against: 0,
+            challenger: addr,
+          };
+          Vector::push_back<vote_tally>(state.challenge_queue, new_vote);
           break
         }
         i = i + 1;
