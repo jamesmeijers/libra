@@ -52,6 +52,7 @@ address 0x1{
       outgoing_handle: Event::EventHandle<Outgoing> 
     }
 
+    //TODO: Reach consensus on these values
     const CHALLENGE_BLOCK_DELAY: u64 = 200;
     const VOTE_BLOCK_DELAY: u64 = 2000;
     const MIN_STAKE: u64 = 1000000;
@@ -76,7 +77,7 @@ address 0x1{
 
     public fun refund (updater: &signer, ol_recipient: address, eth_sender: vector<u8>, value: u64) {
       addr = Signer::address_of(updater);
-      assert(is_updater(addr), 1);
+      assert(is_updater(updater), 1);
 
       let id = get_next_id ();
       let state = borrow_global_mut<EthBridge>(CoreAddresses::LIBRA_ROOT_ADDRESS());
@@ -100,7 +101,7 @@ address 0x1{
 
     public fun challenge (operator: &signer, id: u64) {
       addr = Signer::address_of(operator);
-      assert(is_operator(addr), 1);
+      assert(is_operator(operator), 1);
 
       let state = borrow_global_mut<EthBridge>(CoreAddresses::LIBRA_ROOT_ADDRESS());
       let i = 0;
@@ -129,7 +130,7 @@ address 0x1{
 
     public fun vote (operator: &signer, id: u64, is_correct: bool) acquires EthBridge {
       addr = Signer::address_of(operator);
-      assert(is_operator(addr), 1);
+      assert(is_operator(operator), 1);
 
       let state = borrow_global_mut<EthBridge>(CoreAddresses::LIBRA_ROOT_ADDRESS());
       let i = 0;
@@ -229,6 +230,7 @@ address 0x1{
 
     fun slash (vm: &signer) {
       CoreAddresses::assert_libra_root(vm);
+      //TODO
     }
 
     public fun initialize_eth_bridge (vm: &signer) {
@@ -245,11 +247,20 @@ address 0x1{
       
     }
 
-    fun is_updater (id: address) {
+    fun is_updater (updater: &signer):bool {
+      //TODO: how is the updater decided on? 
 
     }
 
-    fun is_operator (id: address) {
+    fun is_operator (operator: &signer) {
+      Roles::assert_validator(signer);
+      let bal = LibraAccount::balance(Signer::address_of(operator));
+      if (bal >= MIN_STAKE) {
+        true
+      }
+      else {
+        false
+      }
 
     }
 
@@ -260,94 +271,5 @@ address 0x1{
       i
     }
 
-
-
-    /*
-    public fun init_handle(sender: &signer) {
-      let account = Signer::address_of(sender);
-      if (!exists<Handle>(account)) {
-        Event::publish_generator(sender);
-        move_to(sender, Handle { h: Event::new_event_handle(sender) })
-      };
-    }
-
-    public fun emit(account: &signer, i: u64) acquires Handle{
-      let addr = Signer::address_of(account);
-
-      let handle = borrow_global_mut<Handle>(addr);
-
-      Event::emit_event(&mut handle.h, AnEvent { i })
-    }
-
-
-    // TODO: Demoware, Change this to EventHandle
-    
-
-    
-
-    public fun initialize_eth(vm: &signer){
-      assert(is_testnet(), 01);
-      CoreAddresses::assert_libra_root(vm);
-      move_to<EthBridge>(vm, EthBridge{
-        lock_history: Vector::empty<Details>(),
-        unlock_history: Vector::empty<Details>(),
-        queue_unlock: Vector::empty<Details>(),
-        balance: Libra::zero<GAS>()
-      });
-    }
-
-    // TODO: Eth_Receipient is a hex.
-    public fun lock_from(sender: &signer, eth_recipient: vector<u8>, coin: Libra::Libra<GAS>) acquires EthBridge {
-      assert(is_testnet(), 01);
-
-      let state = borrow_global_mut<EthBridge>(CoreAddresses::LIBRA_ROOT_ADDRESS());
-      
-      Vector::push_back<Details>(&mut state.lock_history, Details {
-        ol_party: Signer::address_of(sender),
-        eth_party: eth_recipient,
-        outgoing: true,
-        value: Libra::value<GAS>(&coin)
-      });
-      Libra::deposit(&mut state.balance, coin);
-    }
-
-    public fun unlock_to(vm: &signer, ol_recipient: address, eth_sender: vector<u8>, value: u64) acquires EthBridge {
-      assert(is_testnet(), 01);
-      CoreAddresses::assert_libra_root(vm);
-
-      let state = borrow_global_mut<EthBridge>(CoreAddresses::LIBRA_ROOT_ADDRESS());
-      
-      Vector::push_back<Details>(&mut state.queue_unlock, Details {
-        ol_party: ol_recipient,
-        eth_party: eth_sender,
-        outgoing: false,
-        value: value
-      });
-    }
-
-    public fun process_unlock(vm: &signer, details: Details) acquires EthBridge {
-      assert(is_testnet(), 01);
-      CoreAddresses::assert_libra_root(vm);
-
-      let state = borrow_global_mut<EthBridge>(CoreAddresses::LIBRA_ROOT_ADDRESS());
-      
-
-      let coin_unlocked = Libra::withdraw(&mut state.balance, details.value);
-      LibraAccount::vm_deposit_with_metadata<GAS>(
-        vm,
-        details.ol_party,
-        coin_unlocked,
-        b"bridge_unlock",
-        b""
-      );
-
-      // save history
-      // TODO: This should be an event.
-      let (_, i) = Vector::index_of<Details>(&state.queue_unlock, &details);
-      Vector::remove<Details>(&mut state.queue_unlock, i);
-      Vector::push_back<Details>(&mut state.unlock_history, details);
-    }
-
-    */
   }
 }
