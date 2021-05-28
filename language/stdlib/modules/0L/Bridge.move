@@ -2,6 +2,7 @@
 /////////////////////////////////////////////////////////////////////////
 // 0L Module
 // Ethereum Bridge Implementation
+// TODO: Make errors meaningful
 /////////////////////////////////////////////////////////////////////////
 
 address 0x1{
@@ -23,6 +24,7 @@ address 0x1{
       eth_party: vector<u8>,
       value: u64,
       challenged: bool,
+      updater: address,
     }
 
     struct Outgoing {
@@ -50,7 +52,9 @@ address 0x1{
       outgoing_handle: Event::EventHandle<Outgoing> 
     }
 
-
+    const CHALLENGE_BLOCK_DELAY: u64 = 200;
+    const VOTE_BLOCK_DELAY: u64 = 2000;
+    const MIN_STAKE: u64 = 1000000;
 
     public fun deposit (sender: &signer, eth_recipient: vector<u8>, coin: Libra::Libra<GAS>) acquires EthBridge {
 
@@ -84,6 +88,7 @@ address 0x1{
         eth_party: eth_sender,
         value: value,
         challenged: false,
+        updater: addr,
       });
 
       let tx_details_event = *& tx_details;
@@ -103,7 +108,7 @@ address 0x1{
 
       while (i < l) {
         let tx = FIFO::borrow_mut<Incoming>(& state.incoming_queue, i);
-        if (tx.id == id) {
+        if (tx.id == id && !tx.challenged) {
           tx.challenged = true;
           let new_vote = vote_tally {
             tx: *tx,
@@ -122,7 +127,7 @@ address 0x1{
 
     }
 
-    public fun vote (operator: &signer, id: u64, is_correct: bool) {
+    public fun vote (operator: &signer, id: u64, is_correct: bool) acquires EthBridge {
       addr = Signer::address_of(operator);
       assert(is_operator(addr), 1);
 
@@ -153,7 +158,77 @@ address 0x1{
 
     public fun process_queues (vm: &signer) {
       CoreAddresses::assert_libra_root(vm);
+      let current_block = 0; //TODO: how to get current block
+      //process the incoming queue
+      let state = borrow_global_mut<EthBridge>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+      loop {
+        if (FIFO::len<Incoming>(&state.incoming_queue) == 0) {
+          break
+        }
 
+        let next_tx = FIFO::peek<Incoming>(&state.incoming_queue);
+        if (current_block - next_tx.time < CHALLENGE_BLOCK_DELAY) {
+          //oldest tx has not yet matured
+          break
+        }
+
+        let next_tx = FIFO::pop<Incoming>(&state.incoming_queue);
+        //TODO add checks
+        if (!next_tx.challenged) {
+          let coin_unlocked = Libra::withdraw(&mut state.balance, next_tx.value);
+          LibraAccount::vm_deposit_with_metadata<GAS>(
+            vm,
+            next_tx.ol_party,
+            coin_unlocked,
+            b"bridge_unlock",
+            b""
+          );
+          //TODO add event
+        }
+      };
+
+      
+
+      //process the challenge queue
+      loop {
+        if (FIFO::len<vote_tally>(&state.challenge_queue) == 0) {
+          break
+        }
+
+        let next_tx = FIFO::peek<vote_tally>(&mut state.challenge_queue);
+        if (current_block - next_tx.time < VOTE_BLOCK_DELAY) {
+          //oldest tx has not yet matured
+          break
+        }
+
+        let next_tx = FIFO::pop<vote_tally>(&mut state.challenge_queue);
+        //TODO add checks
+
+        if (next_tx.for > next_tx.against) {
+          //the tx is approved
+          let coin_unlocked = Libra::withdraw(&mut state.balance, next_tx.tx.value);
+          LibraAccount::vm_deposit_with_metadata<GAS>(
+            vm,
+            next_tx.tx.ol_party,
+            coin_unlocked,
+            b"bridge_unlock",
+            b""
+          );
+          slash(next_tx.challenger());
+          //TODO add event
+        }
+        else {
+          //the challenge was successful, tx is denied
+          slash(next_tx.tx.updater());
+          //TODO add event
+        };
+      };
+
+
+    }
+
+    fun slash (vm: &signer) {
+      CoreAddresses::assert_libra_root(vm);
     }
 
     public fun initialize_eth_bridge (vm: &signer) {
