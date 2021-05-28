@@ -33,7 +33,7 @@ address 0x1{
       value: u64,
     }
 
-    struct vote {
+    struct vote_tally {
       tx: Incoming, 
       voted: vector<address>,
       for: u64,
@@ -42,7 +42,7 @@ address 0x1{
 
     resource struct EthBridge{
       incoming_queue: FIFO<Incoming>,
-      challenge_queue: FIFO<vote>,
+      challenge_queue: FIFO<vote_tally>,
       id: u64,
       balance: Libra::Libra<GAS>,
       incoming_handle: Event::EventHandle<Incoming>,
@@ -119,10 +119,10 @@ address 0x1{
 
       let state = borrow_global_mut<EthBridge>(CoreAddresses::LIBRA_ROOT_ADDRESS());
       let i = 0;
-      let l = FIFO::len<vote>(& state.challenge_queue);
+      let l = FIFO::len<vote_tally>(& state.challenge_queue);
 
       while (i < l) {
-        tx = FIFO::borrow_mut<vote>(& state.challenge_queue, i);
+        tx = FIFO::borrow_mut<vote_tally>(& state.challenge_queue, i);
         if (tx.tx.id == id) {
           assert (!Vector::contains<address>(& tx.voted, addr), 1);
           Vector::push_back<address> (&mut tx.voted, addr);
@@ -152,7 +152,7 @@ address 0x1{
 
       move_to<EthBridge>(vm, EthBridge{
         incoming_queue: FIFO::empty<Incoming>(),
-        challenge_queue: FIFO::empty<vote>(),
+        challenge_queue: FIFO::empty<vote_tally>(),
         id: 1,
         balance: Libra::zero<GAS>(),
         incoming_handle: Event::new_event_handle<Incoming>(vm),
