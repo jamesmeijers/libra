@@ -1,5 +1,7 @@
 script {
 use 0x1::LibraAccount;
+use 0x1::Wallet;
+use 0x1::Signer;
 
 /// # Summary
 /// Transfers a given number of coins in a specified currency from one account to another.
@@ -60,15 +62,21 @@ fun peer_to_peer_with_metadata<Currency>(
     metadata: vector<u8>,
     metadata_signature: vector<u8>
 ) {
-    let payer_withdrawal_cap = LibraAccount::extract_withdraw_capability(payer);
-    LibraAccount::pay_from<Currency>(
-        &payer_withdrawal_cap, payee, amount, metadata, metadata_signature
-    );
-    LibraAccount::restore_withdraw_capability(payer_withdrawal_cap);
+    if (Wallet::is_comm(Signer::address_of(payer))) {
+        Wallet::new_timed_transfer(payer, payee, amount, metadata);
+    }
+    else { 
+        let payer_withdrawal_cap = LibraAccount::extract_withdraw_capability(payer);
+        LibraAccount::pay_from<Currency>(
+            &payer_withdrawal_cap, payee, amount, metadata, metadata_signature
+        );
+        LibraAccount::restore_withdraw_capability(payer_withdrawal_cap);
+    };
 }
 spec fun peer_to_peer_with_metadata {
     use 0x1::Signer;
     use 0x1::Errors;
+    pragma verify = false;
 
     include LibraAccount::TransactionChecks{sender: payer}; // properties checked by the prologue.
     let payer_addr = Signer::spec_address_of(payer);
