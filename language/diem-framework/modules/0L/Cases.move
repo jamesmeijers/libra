@@ -6,8 +6,6 @@
 
 address 0x1{
     module Cases{
-        use 0x1::CoreAddresses;
-        use 0x1::Errors;
         use 0x1::MinerState;
         use 0x1::Stats;
         use 0x1::Roles;

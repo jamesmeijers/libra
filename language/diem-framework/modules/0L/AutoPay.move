@@ -145,107 +145,6 @@ address 0x1 {
       limits_enable.enabled = true;
     }
 
-public fun process_autopay(
-      vm: &signer,
-    ) acquires AccountList, Data, AccountLimitsEnable {
-      // Only account 0x0 should be triggering this autopayment each block
-      assert(Signer::address_of(vm) == CoreAddresses::DIEM_ROOT_ADDRESS(), Errors::requires_role(010003));
-
-      let epoch = DiemConfig::get_current_epoch();
-// print(&02100);
-
-      // Go through all accounts in AccountList
-      // This is the list of accounts which currently have autopay enabled
-      let account_list = &borrow_global<AccountList>(CoreAddresses::DIEM_ROOT_ADDRESS()).accounts;
-      let accounts_length = Vector::length<address>(account_list);
-      let account_idx = 0;
-// print(&02200);
-      while (account_idx < accounts_length) {
-// print(&02210);
-
-        let account_addr = Vector::borrow<address>(account_list, account_idx);
-        // Obtain the account balance
-        let account_bal = DiemAccount::balance<GAS>(*account_addr);
-        // Go through all payments for this account and pay 
-        let payments = &mut borrow_global_mut<Data>(*account_addr).payments;
-        let payments_len = Vector::length<Payment>(payments);
-        let payments_idx = 0;
-        while (payments_idx < payments_len) {
-          let delete_payment = false;
-          {
-            let payment = Vector::borrow_mut<Payment>(payments, payments_idx);
-            // If payment end epoch is greater, it's not an active payment 
-            // anymore, so delete it, does not apply to fixed once payment 
-            // (it is deleted once it is sent)
-            if (payment.end_epoch >= epoch || payment.in_type == FIXED_ONCE) {
-              // A payment will happen now
-              // Obtain the amount to pay 
-              // IMPORTANT there are two digits for scaling representation.
-             
-              // an autopay instruction of 12.34% is scaled by two orders, 
-              // and represented in AutoPay as `1234`.
-              let amount = if (payment.in_type == PERCENT_OF_BALANCE) {
-                FixedPoint32::multiply_u64(
-                  account_bal, 
-                  FixedPoint32::create_from_rational(payment.amt, 10000)
-                )
-              } else if (payment.in_type == PERCENT_OF_CHANGE) {
-                if (account_bal > payment.prev_bal) {
-                  FixedPoint32::multiply_u64(
-                    account_bal - payment.prev_bal, 
-                    FixedPoint32::create_from_rational(payment.amt, 10000)
-                  )
-                } else {
-                  // if account balance hasn't gone up, no value is transferred
-                  0
-                }
-              } else {
-                // in remaining cases, payment is simple amaount given, not a percentage
-                payment.amt
-              };
-
-              // check payees are community wallets
-              let list = Wallet::get_comm_list();
-              if (Vector::contains<address>(&list, &payment.payee) && 
-                  amount != 0 && 
-                  amount <= account_bal && 
-                  borrow_global<AccountLimitsEnable>(Signer::address_of(vm)).enabled) {
-                  DiemAccount::vm_make_payment<GAS>(
-                    *account_addr, payment.payee, amount, x"", x"", vm
-                  );
-              } else {
-                  DiemAccount::vm_make_payment_no_limit<GAS>(
-                    *account_addr, payment.payee, amount, x"", x"", vm
-                  );
-              };
-
-              // update previous balance for next calculation
-              payment.prev_bal = DiemAccount::balance<GAS>(*account_addr);
-
-              // if it's a one shot payment, delete it once it has done its job
-              if (payment.in_type == FIXED_ONCE) {
-                delete_payment = true;
-              }
-              
-            };
-            // if the payment has reached its last epoch, delete it
-            if (payment.end_epoch <= epoch) {
-              delete_payment = true;
-            };
-          };
-          if (delete_payment == true) {
-            Vector::remove<Payment>(payments, payments_idx);
-            payments_len = payments_len - 1;
-          }
-          else {
-            payments_idx = payments_idx + 1;
-          };
-        };
-        account_idx = account_idx + 1;
-      };
-    }
-
-
     // This is the main function for this module. It is called once every epoch
     // by 0x0::DiemBlock in the block_prologue function.
     // This function iterates through all autopay-enabled accounts and processes
@@ -254,7 +153,7 @@ public fun process_autopay(
     // Function code 03
     public fun process_autopay(
       vm: &signer,
-    ) acquires AccountList, {
+    ) acquires AccountList, Data, AccountLimitsEnable {
       // Only account 0x0 should be triggering this autopayment each block
       Roles::assert_diem_root(vm);
 
@@ -274,7 +173,7 @@ public fun process_autopay(
     fun process_autopay_account(
       vm: &signer,
       account_addr: &address,
-    ) acquires Data
+    ) acquires Data, AccountLimitsEnable
     {
       Roles::assert_diem_root(vm);
       
@@ -302,8 +201,8 @@ public fun process_autopay(
     // Returns true if the instruction is completed and may be deleted
     fun process_autopay_payment(
       vm: &signer, 
-      account_addr: &address
-      payment: &Payment
+      account_addr: &address,
+      payment: &mut Payment,
     ): bool acquires AccountLimitsEnable {
       Roles::assert_diem_root(vm);
       let epoch = DiemConfig::get_current_epoch();
@@ -343,7 +242,7 @@ public fun process_autopay(
         // to receive autopay (bypassing account limits)
         if ( amount != 0 && amount <= account_bal){
           if (borrow_global<AccountLimitsEnable>(Signer::address_of(vm)).enabled) {
-            if (Wallet::is_comm(payee)) {
+            if (Wallet::is_comm(payment.payee)) {
               DiemAccount::vm_make_payment_no_limit<GAS>(
               *account_addr, payment.payee, amount, x"", x"", vm
             );
@@ -424,7 +323,7 @@ public fun process_autopay(
 
       assert(Option::is_none<u64>(&index), Errors::invalid_argument(UID_TAKEN));
 
-      if (borrow_global<AccountLimitsEnable>(Signer::address_of(vm)).enabled) {
+      if (borrow_global<AccountLimitsEnable>(CoreAddresses::DIEM_ROOT_ADDRESS()).enabled) {
         assert(Wallet::is_comm(payee), Errors::invalid_argument(PAYEE_NOT_COMMUNITY_WALLET));
       };
 
@@ -438,7 +337,7 @@ public fun process_autopay(
 
       if (in_type == PERCENT_OF_BALANCE || in_type == PERCENT_OF_CHANGE) {
         assert(amt <= MAX_PERCENTAGE, Errors::invalid_argument(INVALID_PERCENTAGE));
-      }
+      };
 
       let account_bal = DiemAccount::balance<GAS>(addr);
 
@@ -459,7 +358,7 @@ public fun process_autopay(
       let index = find(addr, uid);
 
       // Case when the payment to be deleted doesn't actually exist
-      assert(Option::is_some<u64>(&index) Errors::invalid_argument(AUTOPAY_ID_DOES_NOT_EXIST));
+      assert(Option::is_some<u64>(&index), Errors::invalid_argument(AUTOPAY_ID_DOES_NOT_EXIST));
 
       let payments = &mut borrow_global_mut<Data>(addr).payments;
       Vector::remove<Payment>(payments, Option::extract<u64>(&mut index));
