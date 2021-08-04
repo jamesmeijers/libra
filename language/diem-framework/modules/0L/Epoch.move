@@ -12,6 +12,7 @@ module Epoch {
   use 0x1::CoreAddresses;
   use 0x1::Globals;
   use 0x1::DiemConfig;
+  use 0x1::Roles;
 
   /// Contains timing info for the current epoch
   /// epoch: the epoch number
