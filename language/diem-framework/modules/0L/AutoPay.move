@@ -1,11 +1,13 @@
-address 0x1 {
-  // renamed to preventhalting from state corruption
-  module AutoPay2 {
-///////////////////////////////////////////////////////////////////////////
+  ///////////////////////////////////////////////////////////////////////////
   // 0L Module
   // Auto Pay - 
   // File Prefix for errors: 0100
   ///////////////////////////////////////////////////////////////////////////
+
+address 0x1 {
+  /// # Summary
+  /// This module enables automatic payments from accounts to community wallets at epoch boundaries.
+  module AutoPay2 { // renamed to preventhalting from state corruption
     use 0x1::Vector;
     use 0x1::Option::{Self,Option};
     use 0x1::Signer;

@@ -5,6 +5,10 @@
 /////////////////////////////////////////////////////////////////////////
 
 address 0x1{
+    /// # Summary
+    /// This module can be used by root to determine whether a validator is compliant 
+    /// Validators who are no longer compliant may be kicked out of the validator 
+    /// set and/or jailed. To be compliant, validators must be BOTH validating and mining. 
     module Cases{
         use 0x1::MinerState;
         use 0x1::Stats;
